@@ -13,4 +13,6 @@ LIBRERIAS -> - Class-Validator & Class-Transformer
              - @nestjs/Config
              - @nestjs/typeorm typeorm
              - pg 
+             - xlsx
+             - ts-node typescript
 

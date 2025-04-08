@@ -1,0 +1,16 @@
+-- DESARROLLAR AGENTE CONVERSACIONAL -- 
+
+OBJETIVOS --> - Leer datos de una BD
+              - Meter Auth ? 
+              - Registrar pedidos de Compra 
+              - Editar Pedido dentro de los primeros 5 minutos de creacion
+              - Integrarse con WhatsApp
+         
+ARQUITECTURA SIMPLIFICADA -->       USER (W) --> API WSP -> BACKEND -> BD / ENDPOINTS
+
+
+LIBRERIAS -> - Class-Validator & Class-Transformer 
+             - @nestjs/Config
+             - @nestjs/typeorm typeorm
+             - pg 
+

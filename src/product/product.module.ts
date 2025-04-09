@@ -7,6 +7,9 @@ import { Product } from './entities/product.entity';
 @Module({
   controllers: [ProductController],
   providers: [ProductService],
+  //importamos la entidad para que sea accesible y pueda interactuar con
+  // la DB mediante TypeORM
   imports: [TypeOrmModule.forFeature([Product])],
+  exports: [ProductService, TypeOrmModule],
 })
 export class ProductModule {}

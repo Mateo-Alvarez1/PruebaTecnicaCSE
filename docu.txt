@@ -15,4 +15,3 @@ LIBRERIAS -> - Class-Validator & Class-Transformer
              - pg 
              - xlsx
              - ts-node typescript
-

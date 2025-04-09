@@ -8,6 +8,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     SeedModule,
     ProductModule,
     ConfigModule.forRoot(),
+    // Inicializamos el modulo raiz de TypeORM para generar la conexion a la base de datos dockerizada
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST,
@@ -15,8 +16,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
       database: process.env.DB_NAME,
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
-      autoLoadEntities: true,
-      synchronize: true,
+      autoLoadEntities: true, // detecta las entidades automaticamente
+      synchronize: true, // sincroniza nuestras entidades con la DB al inciar el programa
     }),
   ],
   controllers: [],

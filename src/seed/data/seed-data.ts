@@ -1,289 +1,1340 @@
-export interface Welcome {
-  ID: string;
-  TIPO_PRENDA: TipoPrenda;
-  TALLA: Talla;
-  COLOR: Color;
-  CANTIDAD_DISPONIBLE: number;
-  PRECIO_50_U: number;
-  PRECIO_100_U: number;
-  PRECIO_200_U: number;
-  DISPONIBLE: Disponible;
-  CATEGORÍA: Categoría;
-  DESCRIPCIÓN: Descripción;
+interface SeedProduct {
+  id: string;
+  tipoPrenda: ValidTypes;
+  talla: ValidSizes;
+  color: Validcolors;
+  cantidadDisponible: number;
+  precio50U: number;
+  precio100U: number;
+  precio200U: number;
+  disponible: string;
+  categoria: ValidCategory;
+  descripcion: string;
 }
 
-export enum Categoría {
-  Casual = 'Casual',
-  Deportivo = 'Deportivo',
-  Formal = 'Formal',
+type ValidCategory = 'Casual' | 'Deportivo' | 'Formal';
+type Validcolors =
+  | 'Amarillo'
+  | 'Azul'
+  | 'Blanco'
+  | 'Gris'
+  | 'Negro'
+  | 'Rojo'
+  | 'Verde';
+type ValidSizes = 'S' | 'M' | 'L' | 'XL' | 'XXL';
+type ValidTypes =
+  | 'Camisa'
+  | 'Camiseta'
+  | 'Chaqueta'
+  | 'Falda'
+  | 'Pantalón'
+  | 'Sudadera';
+
+interface SeedData {
+  products: SeedProduct[];
 }
 
-export enum Color {
-  Amarillo = 'Amarillo',
-  Azul = 'Azul',
-  Blanco = 'Blanco',
-  Gris = 'Gris',
-  Negro = 'Negro',
-  Rojo = 'Rojo',
-  Verde = 'Verde',
-}
-
-export enum Descripción {
-  DiseñoModernoYElegante = 'Diseño moderno y elegante.',
-  IdealParaUsoDiario = 'Ideal para uso diario.',
-  MaterialDeAltaCalidad = 'Material de alta calidad.',
-  PerfectaParaActividadesAlAireLibre = 'Perfecta para actividades al aire libre.',
-  PrendaCómodaYLigera = 'Prenda cómoda y ligera.',
-}
-
-export enum Disponible {
-  No = 'No',
-  Sí = 'Sí',
-}
-
-export enum Talla {
-  L = 'L',
-  M = 'M',
-  S = 'S',
-  Xl = 'XL',
-  Xxl = 'XXL',
-}
-
-export enum TipoPrenda {
-  Camisa = 'Camisa',
-  Camiseta = 'Camiseta',
-  Chaqueta = 'Chaqueta',
-  Falda = 'Falda',
-  Pantalón = 'Pantalón',
-  Sudadera = 'Sudadera',
-}
-
-// Converts JSON strings to/from your types
-// and asserts the results of JSON.parse at runtime
-export class Convert {
-  public static toWelcome(json: string): Welcome[] {
-    return cast(JSON.parse(json), a(r('Welcome')));
-  }
-
-  public static welcomeToJson(value: Welcome[]): string {
-    return JSON.stringify(uncast(value, a(r('Welcome'))), null, 2);
-  }
-}
-
-function invalidValue(typ: any, val: any, key: any, parent: any = ''): never {
-  const prettyTyp = prettyTypeName(typ);
-  const parentText = parent ? ` on ${parent}` : '';
-  const keyText = key ? ` for key "${key}"` : '';
-  throw Error(
-    `Invalid value${keyText}${parentText}. Expected ${prettyTyp} but got ${JSON.stringify(val)}`,
-  );
-}
-
-function prettyTypeName(typ: any): string {
-  if (Array.isArray(typ)) {
-    if (typ.length === 2 && typ[0] === undefined) {
-      return `an optional ${prettyTypeName(typ[1])}`;
-    } else {
-      return `one of [${typ
-        .map((a) => {
-          return prettyTypeName(a);
-        })
-        .join(', ')}]`;
-    }
-  } else if (typeof typ === 'object' && typ.literal !== undefined) {
-    return typ.literal;
-  } else {
-    return typeof typ;
-  }
-}
-
-function jsonToJSProps(typ: any): any {
-  if (typ.jsonToJS === undefined) {
-    const map: any = {};
-    typ.props.forEach((p: any) => (map[p.json] = { key: p.js, typ: p.typ }));
-    typ.jsonToJS = map;
-  }
-  return typ.jsonToJS;
-}
-
-function jsToJSONProps(typ: any): any {
-  if (typ.jsToJSON === undefined) {
-    const map: any = {};
-    typ.props.forEach((p: any) => (map[p.js] = { key: p.json, typ: p.typ }));
-    typ.jsToJSON = map;
-  }
-  return typ.jsToJSON;
-}
-
-function transform(
-  val: any,
-  typ: any,
-  getProps: any,
-  key: any = '',
-  parent: any = '',
-): any {
-  function transformPrimitive(typ: string, val: any): any {
-    if (typeof typ === typeof val) return val;
-    return invalidValue(typ, val, key, parent);
-  }
-
-  function transformUnion(typs: any[], val: any): any {
-    // val must validate against one typ in typs
-    const l = typs.length;
-    for (let i = 0; i < l; i++) {
-      const typ = typs[i];
-      try {
-        return transform(val, typ, getProps);
-      } catch (_) {}
-    }
-    return invalidValue(typs, val, key, parent);
-  }
-
-  function transformEnum(cases: string[], val: any): any {
-    if (cases.indexOf(val) !== -1) return val;
-    return invalidValue(
-      cases.map((a) => {
-        return l(a);
-      }),
-      val,
-      key,
-      parent,
-    );
-  }
-
-  function transformArray(typ: any, val: any): any {
-    // val must be an array with no invalid elements
-    if (!Array.isArray(val)) return invalidValue(l('array'), val, key, parent);
-    return val.map((el) => transform(el, typ, getProps));
-  }
-
-  function transformDate(val: any): any {
-    if (val === null) {
-      return null;
-    }
-    const d = new Date(val);
-    if (isNaN(d.valueOf())) {
-      return invalidValue(l('Date'), val, key, parent);
-    }
-    return d;
-  }
-
-  function transformObject(
-    props: { [k: string]: any },
-    additional: any,
-    val: any,
-  ): any {
-    if (val === null || typeof val !== 'object' || Array.isArray(val)) {
-      return invalidValue(l(ref || 'object'), val, key, parent);
-    }
-    const result: any = {};
-    Object.getOwnPropertyNames(props).forEach((key) => {
-      const prop = props[key];
-      const v = Object.prototype.hasOwnProperty.call(val, key)
-        ? val[key]
-        : undefined;
-      result[prop.key] = transform(v, prop.typ, getProps, key, ref);
-    });
-    Object.getOwnPropertyNames(val).forEach((key) => {
-      if (!Object.prototype.hasOwnProperty.call(props, key)) {
-        result[key] = transform(val[key], additional, getProps, key, ref);
-      }
-    });
-    return result;
-  }
-
-  if (typ === 'any') return val;
-  if (typ === null) {
-    if (val === null) return val;
-    return invalidValue(typ, val, key, parent);
-  }
-  if (typ === false) return invalidValue(typ, val, key, parent);
-  let ref: any = undefined;
-  while (typeof typ === 'object' && typ.ref !== undefined) {
-    ref = typ.ref;
-    typ = typeMap[typ.ref];
-  }
-  if (Array.isArray(typ)) return transformEnum(typ, val);
-  if (typeof typ === 'object') {
-    return typ.hasOwnProperty('unionMembers')
-      ? transformUnion(typ.unionMembers, val)
-      : typ.hasOwnProperty('arrayItems')
-        ? transformArray(typ.arrayItems, val)
-        : typ.hasOwnProperty('props')
-          ? transformObject(getProps(typ), typ.additional, val)
-          : invalidValue(typ, val, key, parent);
-  }
-  // Numbers can be parsed by Date but shouldn't be.
-  if (typ === Date && typeof val !== 'number') return transformDate(val);
-  return transformPrimitive(typ, val);
-}
-
-function cast<T>(val: any, typ: any): T {
-  return transform(val, typ, jsonToJSProps);
-}
-
-function uncast<T>(val: T, typ: any): any {
-  return transform(val, typ, jsToJSONProps);
-}
-
-function l(typ: any) {
-  return { literal: typ };
-}
-
-function a(typ: any) {
-  return { arrayItems: typ };
-}
-
-function u(...typs: any[]) {
-  return { unionMembers: typs };
-}
-
-function o(props: any[], additional: any) {
-  return { props, additional };
-}
-
-function m(additional: any) {
-  return { props: [], additional };
-}
-
-function r(name: string) {
-  return { ref: name };
-}
-
-const typeMap: any = {
-  Welcome: o(
-    [
-      { json: 'ID', js: 'ID', typ: '' },
-      { json: 'TIPO_PRENDA', js: 'TIPO_PRENDA', typ: r('TipoPrenda') },
-      { json: 'TALLA', js: 'TALLA', typ: r('Talla') },
-      { json: 'COLOR', js: 'COLOR', typ: r('Color') },
-      { json: 'CANTIDAD_DISPONIBLE', js: 'CANTIDAD_DISPONIBLE', typ: 0 },
-      { json: 'PRECIO_50_U', js: 'PRECIO_50_U', typ: 0 },
-      { json: 'PRECIO_100_U', js: 'PRECIO_100_U', typ: 0 },
-      { json: 'PRECIO_200_U', js: 'PRECIO_200_U', typ: 0 },
-      { json: 'DISPONIBLE', js: 'DISPONIBLE', typ: r('Disponible') },
-      { json: 'CATEGORÍA', js: 'CATEGORÍA', typ: r('Categoría') },
-      { json: 'DESCRIPCIÓN', js: 'DESCRIPCIÓN', typ: r('Descripción') },
-    ],
-    false,
-  ),
-  Categoría: ['Casual', 'Deportivo', 'Formal'],
-  Color: ['Amarillo', 'Azul', 'Blanco', 'Gris', 'Negro', 'Rojo', 'Verde'],
-  Descripción: [
-    'Diseño moderno y elegante.',
-    'Ideal para uso diario.',
-    'Material de alta calidad.',
-    'Perfecta para actividades al aire libre.',
-    'Prenda cómoda y ligera.',
-  ],
-  Disponible: ['No', 'Sí'],
-  Talla: ['L', 'M', 'S', 'XL', 'XXL'],
-  TipoPrenda: [
-    'Camisa',
-    'Camiseta',
-    'Chaqueta',
-    'Falda',
-    'Pantalón',
-    'Sudadera',
+export const initialData: SeedData = {
+  products: [
+    {
+      id: '001',
+      tipoPrenda: 'Pantalón',
+      talla: 'XXL',
+      color: 'Verde',
+      cantidadDisponible: 177,
+      precio50U: 1058,
+      precio100U: 1182,
+      precio200U: 462,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '002',
+      tipoPrenda: 'Camiseta',
+      talla: 'XXL',
+      color: 'Blanco',
+      cantidadDisponible: 33,
+      precio50U: 510,
+      precio100U: 975,
+      precio200U: 739,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '003',
+      tipoPrenda: 'Camiseta',
+      talla: 'S',
+      color: 'Negro',
+      cantidadDisponible: 457,
+      precio50U: 1292,
+      precio100U: 457,
+      precio200U: 873,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '004',
+      tipoPrenda: 'Falda',
+      talla: 'S',
+      color: 'Blanco',
+      cantidadDisponible: 414,
+      precio50U: 1138,
+      precio100U: 986,
+      precio200U: 386,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '005',
+      tipoPrenda: 'Sudadera',
+      talla: 'XL',
+      color: 'Verde',
+      cantidadDisponible: 151,
+      precio50U: 603,
+      precio100U: 799,
+      precio200U: 367,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '006',
+      tipoPrenda: 'Chaqueta',
+      talla: 'S',
+      color: 'Amarillo',
+      cantidadDisponible: 223,
+      precio50U: 961,
+      precio100U: 636,
+      precio200U: 1014,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '007',
+      tipoPrenda: 'Pantalón',
+      talla: 'L',
+      color: 'Gris',
+      cantidadDisponible: 436,
+      precio50U: 1331,
+      precio100U: 1222,
+      precio200U: 516,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '008',
+      tipoPrenda: 'Falda',
+      talla: 'XXL',
+      color: 'Blanco',
+      cantidadDisponible: 441,
+      precio50U: 1286,
+      precio100U: 1306,
+      precio200U: 613,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '009',
+      tipoPrenda: 'Sudadera',
+      talla: 'L',
+      color: 'Azul',
+      cantidadDisponible: 187,
+      precio50U: 889,
+      precio100U: 991,
+      precio200U: 608,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '010',
+      tipoPrenda: 'Pantalón',
+      talla: 'XXL',
+      color: 'Gris',
+      cantidadDisponible: 462,
+      precio50U: 647,
+      precio100U: 1149,
+      precio200U: 542,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '011',
+      tipoPrenda: 'Chaqueta',
+      talla: 'S',
+      color: 'Azul',
+      cantidadDisponible: 65,
+      precio50U: 464,
+      precio100U: 1109,
+      precio200U: 555,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '012',
+      tipoPrenda: 'Pantalón',
+      talla: 'M',
+      color: 'Blanco',
+      cantidadDisponible: 65,
+      precio50U: 786,
+      precio100U: 941,
+      precio200U: 640,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '013',
+      tipoPrenda: 'Falda',
+      talla: 'XL',
+      color: 'Azul',
+      cantidadDisponible: 454,
+      precio50U: 762,
+      precio100U: 1123,
+      precio200U: 898,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '014',
+      tipoPrenda: 'Chaqueta',
+      talla: 'L',
+      color: 'Gris',
+      cantidadDisponible: 193,
+      precio50U: 430,
+      precio100U: 903,
+      precio200U: 940,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '015',
+      tipoPrenda: 'Falda',
+      talla: 'L',
+      color: 'Azul',
+      cantidadDisponible: 246,
+      precio50U: 952,
+      precio100U: 530,
+      precio200U: 1107,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '016',
+      tipoPrenda: 'Falda',
+      talla: 'XL',
+      color: 'Blanco',
+      cantidadDisponible: 301,
+      precio50U: 883,
+      precio100U: 693,
+      precio200U: 615,
+      disponible: 'No',
+      categoria: 'Formal',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '017',
+      tipoPrenda: 'Camiseta',
+      talla: 'S',
+      color: 'Azul',
+      cantidadDisponible: 348,
+      precio50U: 1128,
+      precio100U: 1351,
+      precio200U: 737,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '018',
+      tipoPrenda: 'Falda',
+      talla: 'L',
+      color: 'Gris',
+      cantidadDisponible: 39,
+      precio50U: 1224,
+      precio100U: 1394,
+      precio200U: 763,
+      disponible: 'No',
+      categoria: 'Deportivo',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '019',
+      tipoPrenda: 'Chaqueta',
+      talla: 'L',
+      color: 'Azul',
+      cantidadDisponible: 86,
+      precio50U: 416,
+      precio100U: 939,
+      precio200U: 382,
+      disponible: 'No',
+      categoria: 'Formal',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '020',
+      tipoPrenda: 'Camiseta',
+      talla: 'XXL',
+      color: 'Rojo',
+      cantidadDisponible: 302,
+      precio50U: 1292,
+      precio100U: 962,
+      precio200U: 816,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '021',
+      tipoPrenda: 'Pantalón',
+      talla: 'L',
+      color: 'Verde',
+      cantidadDisponible: 334,
+      precio50U: 1017,
+      precio100U: 639,
+      precio200U: 1238,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '022',
+      tipoPrenda: 'Sudadera',
+      talla: 'XL',
+      color: 'Azul',
+      cantidadDisponible: 350,
+      precio50U: 1288,
+      precio100U: 1339,
+      precio200U: 547,
+      disponible: 'No',
+      categoria: 'Deportivo',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '023',
+      tipoPrenda: 'Pantalón',
+      talla: 'S',
+      color: 'Verde',
+      cantidadDisponible: 257,
+      precio50U: 525,
+      precio100U: 544,
+      precio200U: 1205,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '024',
+      tipoPrenda: 'Camiseta',
+      talla: 'M',
+      color: 'Negro',
+      cantidadDisponible: 34,
+      precio50U: 1386,
+      precio100U: 643,
+      precio200U: 1131,
+      disponible: 'No',
+      categoria: 'Formal',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '025',
+      tipoPrenda: 'Sudadera',
+      talla: 'S',
+      color: 'Negro',
+      cantidadDisponible: 166,
+      precio50U: 596,
+      precio100U: 1276,
+      precio200U: 791,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '026',
+      tipoPrenda: 'Camiseta',
+      talla: 'S',
+      color: 'Verde',
+      cantidadDisponible: 214,
+      precio50U: 503,
+      precio100U: 385,
+      precio200U: 858,
+      disponible: 'No',
+      categoria: 'Casual',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '027',
+      tipoPrenda: 'Sudadera',
+      talla: 'S',
+      color: 'Verde',
+      cantidadDisponible: 64,
+      precio50U: 967,
+      precio100U: 724,
+      precio200U: 768,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '028',
+      tipoPrenda: 'Falda',
+      talla: 'XL',
+      color: 'Negro',
+      cantidadDisponible: 196,
+      precio50U: 464,
+      precio100U: 1368,
+      precio200U: 711,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '029',
+      tipoPrenda: 'Chaqueta',
+      talla: 'XL',
+      color: 'Amarillo',
+      cantidadDisponible: 282,
+      precio50U: 1465,
+      precio100U: 1069,
+      precio200U: 464,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '030',
+      tipoPrenda: 'Camisa',
+      talla: 'M',
+      color: 'Verde',
+      cantidadDisponible: 206,
+      precio50U: 1100,
+      precio100U: 842,
+      precio200U: 572,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '031',
+      tipoPrenda: 'Falda',
+      talla: 'XXL',
+      color: 'Blanco',
+      cantidadDisponible: 322,
+      precio50U: 1006,
+      precio100U: 1017,
+      precio200U: 1065,
+      disponible: 'No',
+      categoria: 'Casual',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '032',
+      tipoPrenda: 'Camiseta',
+      talla: 'S',
+      color: 'Rojo',
+      cantidadDisponible: 298,
+      precio50U: 1010,
+      precio100U: 743,
+      precio200U: 431,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '033',
+      tipoPrenda: 'Falda',
+      talla: 'M',
+      color: 'Azul',
+      cantidadDisponible: 482,
+      precio50U: 1120,
+      precio100U: 765,
+      precio200U: 400,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '034',
+      tipoPrenda: 'Camisa',
+      talla: 'L',
+      color: 'Blanco',
+      cantidadDisponible: 40,
+      precio50U: 548,
+      precio100U: 761,
+      precio200U: 685,
+      disponible: 'No',
+      categoria: 'Formal',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '035',
+      tipoPrenda: 'Camisa',
+      talla: 'XXL',
+      color: 'Verde',
+      cantidadDisponible: 264,
+      precio50U: 783,
+      precio100U: 771,
+      precio200U: 1035,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '036',
+      tipoPrenda: 'Sudadera',
+      talla: 'XXL',
+      color: 'Amarillo',
+      cantidadDisponible: 194,
+      precio50U: 1261,
+      precio100U: 479,
+      precio200U: 310,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '037',
+      tipoPrenda: 'Sudadera',
+      talla: 'S',
+      color: 'Negro',
+      cantidadDisponible: 208,
+      precio50U: 925,
+      precio100U: 938,
+      precio200U: 1270,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '038',
+      tipoPrenda: 'Pantalón',
+      talla: 'XXL',
+      color: 'Rojo',
+      cantidadDisponible: 19,
+      precio50U: 1379,
+      precio100U: 539,
+      precio200U: 913,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '039',
+      tipoPrenda: 'Pantalón',
+      talla: 'M',
+      color: 'Verde',
+      cantidadDisponible: 340,
+      precio50U: 1338,
+      precio100U: 449,
+      precio200U: 406,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '040',
+      tipoPrenda: 'Pantalón',
+      talla: 'M',
+      color: 'Negro',
+      cantidadDisponible: 199,
+      precio50U: 1295,
+      precio100U: 713,
+      precio200U: 680,
+      disponible: 'No',
+      categoria: 'Casual',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '041',
+      tipoPrenda: 'Chaqueta',
+      talla: 'M',
+      color: 'Rojo',
+      cantidadDisponible: 142,
+      precio50U: 777,
+      precio100U: 1083,
+      precio200U: 702,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '042',
+      tipoPrenda: 'Chaqueta',
+      talla: 'S',
+      color: 'Amarillo',
+      cantidadDisponible: 333,
+      precio50U: 1089,
+      precio100U: 438,
+      precio200U: 567,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '043',
+      tipoPrenda: 'Sudadera',
+      talla: 'XXL',
+      color: 'Rojo',
+      cantidadDisponible: 304,
+      precio50U: 1271,
+      precio100U: 559,
+      precio200U: 1221,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '044',
+      tipoPrenda: 'Camiseta',
+      talla: 'S',
+      color: 'Azul',
+      cantidadDisponible: 443,
+      precio50U: 424,
+      precio100U: 1046,
+      precio200U: 382,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '045',
+      tipoPrenda: 'Sudadera',
+      talla: 'XL',
+      color: 'Rojo',
+      cantidadDisponible: 376,
+      precio50U: 840,
+      precio100U: 1152,
+      precio200U: 1270,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '046',
+      tipoPrenda: 'Camisa',
+      talla: 'S',
+      color: 'Rojo',
+      cantidadDisponible: 121,
+      precio50U: 1090,
+      precio100U: 818,
+      precio200U: 986,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '047',
+      tipoPrenda: 'Chaqueta',
+      talla: 'XL',
+      color: 'Blanco',
+      cantidadDisponible: 279,
+      precio50U: 608,
+      precio100U: 748,
+      precio200U: 644,
+      disponible: 'No',
+      categoria: 'Formal',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '048',
+      tipoPrenda: 'Camiseta',
+      talla: 'XXL',
+      color: 'Amarillo',
+      cantidadDisponible: 480,
+      precio50U: 548,
+      precio100U: 880,
+      precio200U: 1278,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '049',
+      tipoPrenda: 'Sudadera',
+      talla: 'XL',
+      color: 'Blanco',
+      cantidadDisponible: 262,
+      precio50U: 1167,
+      precio100U: 714,
+      precio200U: 792,
+      disponible: 'No',
+      categoria: 'Deportivo',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '050',
+      tipoPrenda: 'Sudadera',
+      talla: 'XL',
+      color: 'Blanco',
+      cantidadDisponible: 248,
+      precio50U: 717,
+      precio100U: 590,
+      precio200U: 865,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '051',
+      tipoPrenda: 'Falda',
+      talla: 'M',
+      color: 'Blanco',
+      cantidadDisponible: 323,
+      precio50U: 1071,
+      precio100U: 583,
+      precio200U: 831,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '052',
+      tipoPrenda: 'Camisa',
+      talla: 'XXL',
+      color: 'Gris',
+      cantidadDisponible: 411,
+      precio50U: 963,
+      precio100U: 673,
+      precio200U: 689,
+      disponible: 'No',
+      categoria: 'Casual',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '053',
+      tipoPrenda: 'Pantalón',
+      talla: 'XL',
+      color: 'Azul',
+      cantidadDisponible: 405,
+      precio50U: 815,
+      precio100U: 1187,
+      precio200U: 703,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '054',
+      tipoPrenda: 'Falda',
+      talla: 'L',
+      color: 'Azul',
+      cantidadDisponible: 41,
+      precio50U: 805,
+      precio100U: 740,
+      precio200U: 986,
+      disponible: 'No',
+      categoria: 'Deportivo',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '055',
+      tipoPrenda: 'Camisa',
+      talla: 'L',
+      color: 'Blanco',
+      cantidadDisponible: 111,
+      precio50U: 551,
+      precio100U: 1055,
+      precio200U: 921,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '056',
+      tipoPrenda: 'Chaqueta',
+      talla: 'XL',
+      color: 'Negro',
+      cantidadDisponible: 73,
+      precio50U: 876,
+      precio100U: 1056,
+      precio200U: 770,
+      disponible: 'No',
+      categoria: 'Formal',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '057',
+      tipoPrenda: 'Camiseta',
+      talla: 'S',
+      color: 'Rojo',
+      cantidadDisponible: 37,
+      precio50U: 1049,
+      precio100U: 573,
+      precio200U: 356,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '058',
+      tipoPrenda: 'Camisa',
+      talla: 'M',
+      color: 'Rojo',
+      cantidadDisponible: 151,
+      precio50U: 655,
+      precio100U: 730,
+      precio200U: 562,
+      disponible: 'No',
+      categoria: 'Casual',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '059',
+      tipoPrenda: 'Chaqueta',
+      talla: 'XL',
+      color: 'Gris',
+      cantidadDisponible: 260,
+      precio50U: 1052,
+      precio100U: 368,
+      precio200U: 452,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '060',
+      tipoPrenda: 'Pantalón',
+      talla: 'M',
+      color: 'Verde',
+      cantidadDisponible: 405,
+      precio50U: 960,
+      precio100U: 1164,
+      precio200U: 360,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '061',
+      tipoPrenda: 'Chaqueta',
+      talla: 'XXL',
+      color: 'Negro',
+      cantidadDisponible: 297,
+      precio50U: 1055,
+      precio100U: 570,
+      precio200U: 1021,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '062',
+      tipoPrenda: 'Chaqueta',
+      talla: 'S',
+      color: 'Verde',
+      cantidadDisponible: 473,
+      precio50U: 1180,
+      precio100U: 769,
+      precio200U: 482,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '063',
+      tipoPrenda: 'Pantalón',
+      talla: 'L',
+      color: 'Rojo',
+      cantidadDisponible: 11,
+      precio50U: 708,
+      precio100U: 945,
+      precio200U: 654,
+      disponible: 'No',
+      categoria: 'Casual',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '064',
+      tipoPrenda: 'Falda',
+      talla: 'M',
+      color: 'Gris',
+      cantidadDisponible: 374,
+      precio50U: 874,
+      precio100U: 993,
+      precio200U: 766,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '065',
+      tipoPrenda: 'Falda',
+      talla: 'L',
+      color: 'Verde',
+      cantidadDisponible: 137,
+      precio50U: 685,
+      precio100U: 386,
+      precio200U: 1018,
+      disponible: 'No',
+      categoria: 'Casual',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '066',
+      tipoPrenda: 'Camisa',
+      talla: 'XL',
+      color: 'Azul',
+      cantidadDisponible: 441,
+      precio50U: 1151,
+      precio100U: 422,
+      precio200U: 621,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '067',
+      tipoPrenda: 'Pantalón',
+      talla: 'XL',
+      color: 'Azul',
+      cantidadDisponible: 17,
+      precio50U: 1331,
+      precio100U: 1225,
+      precio200U: 704,
+      disponible: 'No',
+      categoria: 'Deportivo',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '068',
+      tipoPrenda: 'Sudadera',
+      talla: 'S',
+      color: 'Blanco',
+      cantidadDisponible: 479,
+      precio50U: 571,
+      precio100U: 1081,
+      precio200U: 1170,
+      disponible: 'No',
+      categoria: 'Deportivo',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '069',
+      tipoPrenda: 'Camisa',
+      talla: 'L',
+      color: 'Negro',
+      cantidadDisponible: 486,
+      precio50U: 835,
+      precio100U: 1207,
+      precio200U: 911,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '070',
+      tipoPrenda: 'Camiseta',
+      talla: 'XL',
+      color: 'Rojo',
+      cantidadDisponible: 364,
+      precio50U: 1225,
+      precio100U: 1248,
+      precio200U: 358,
+      disponible: 'No',
+      categoria: 'Casual',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '071',
+      tipoPrenda: 'Chaqueta',
+      talla: 'L',
+      color: 'Blanco',
+      cantidadDisponible: 320,
+      precio50U: 1070,
+      precio100U: 1281,
+      precio200U: 1014,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '072',
+      tipoPrenda: 'Camiseta',
+      talla: 'L',
+      color: 'Amarillo',
+      cantidadDisponible: 148,
+      precio50U: 1356,
+      precio100U: 974,
+      precio200U: 699,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '073',
+      tipoPrenda: 'Falda',
+      talla: 'L',
+      color: 'Gris',
+      cantidadDisponible: 252,
+      precio50U: 1283,
+      precio100U: 1190,
+      precio200U: 433,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '074',
+      tipoPrenda: 'Pantalón',
+      talla: 'XL',
+      color: 'Rojo',
+      cantidadDisponible: 28,
+      precio50U: 913,
+      precio100U: 1058,
+      precio200U: 334,
+      disponible: 'No',
+      categoria: 'Deportivo',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '075',
+      tipoPrenda: 'Chaqueta',
+      talla: 'S',
+      color: 'Verde',
+      cantidadDisponible: 136,
+      precio50U: 507,
+      precio100U: 521,
+      precio200U: 1207,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '076',
+      tipoPrenda: 'Chaqueta',
+      talla: 'L',
+      color: 'Azul',
+      cantidadDisponible: 18,
+      precio50U: 407,
+      precio100U: 641,
+      precio200U: 1259,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '077',
+      tipoPrenda: 'Sudadera',
+      talla: 'XL',
+      color: 'Gris',
+      cantidadDisponible: 453,
+      precio50U: 516,
+      precio100U: 520,
+      precio200U: 951,
+      disponible: 'No',
+      categoria: 'Formal',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '078',
+      tipoPrenda: 'Camiseta',
+      talla: 'M',
+      color: 'Gris',
+      cantidadDisponible: 360,
+      precio50U: 457,
+      precio100U: 959,
+      precio200U: 1148,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '079',
+      tipoPrenda: 'Camiseta',
+      talla: 'L',
+      color: 'Blanco',
+      cantidadDisponible: 103,
+      precio50U: 445,
+      precio100U: 1191,
+      precio200U: 812,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '080',
+      tipoPrenda: 'Falda',
+      talla: 'S',
+      color: 'Verde',
+      cantidadDisponible: 200,
+      precio50U: 680,
+      precio100U: 965,
+      precio200U: 875,
+      disponible: 'No',
+      categoria: 'Deportivo',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '081',
+      tipoPrenda: 'Sudadera',
+      talla: 'M',
+      color: 'Negro',
+      cantidadDisponible: 319,
+      precio50U: 1008,
+      precio100U: 1071,
+      precio200U: 1212,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '082',
+      tipoPrenda: 'Pantalón',
+      talla: 'M',
+      color: 'Rojo',
+      cantidadDisponible: 337,
+      precio50U: 720,
+      precio100U: 1389,
+      precio200U: 431,
+      disponible: 'No',
+      categoria: 'Formal',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '083',
+      tipoPrenda: 'Sudadera',
+      talla: 'XXL',
+      color: 'Azul',
+      cantidadDisponible: 275,
+      precio50U: 801,
+      precio100U: 780,
+      precio200U: 1221,
+      disponible: 'No',
+      categoria: 'Casual',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '084',
+      tipoPrenda: 'Sudadera',
+      talla: 'XXL',
+      color: 'Rojo',
+      cantidadDisponible: 218,
+      precio50U: 1167,
+      precio100U: 674,
+      precio200U: 1263,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '085',
+      tipoPrenda: 'Camisa',
+      talla: 'M',
+      color: 'Rojo',
+      cantidadDisponible: 19,
+      precio50U: 527,
+      precio100U: 822,
+      precio200U: 791,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '086',
+      tipoPrenda: 'Pantalón',
+      talla: 'S',
+      color: 'Gris',
+      cantidadDisponible: 99,
+      precio50U: 753,
+      precio100U: 731,
+      precio200U: 347,
+      disponible: 'No',
+      categoria: 'Casual',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '087',
+      tipoPrenda: 'Falda',
+      talla: 'L',
+      color: 'Verde',
+      cantidadDisponible: 317,
+      precio50U: 1390,
+      precio100U: 971,
+      precio200U: 1123,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '088',
+      tipoPrenda: 'Camisa',
+      talla: 'M',
+      color: 'Azul',
+      cantidadDisponible: 253,
+      precio50U: 1438,
+      precio100U: 1342,
+      precio200U: 1009,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '089',
+      tipoPrenda: 'Camiseta',
+      talla: 'L',
+      color: 'Verde',
+      cantidadDisponible: 449,
+      precio50U: 778,
+      precio100U: 1177,
+      precio200U: 977,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '090',
+      tipoPrenda: 'Camiseta',
+      talla: 'M',
+      color: 'Verde',
+      cantidadDisponible: 350,
+      precio50U: 404,
+      precio100U: 1221,
+      precio200U: 1012,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '091',
+      tipoPrenda: 'Chaqueta',
+      talla: 'XXL',
+      color: 'Amarillo',
+      cantidadDisponible: 98,
+      precio50U: 463,
+      precio100U: 580,
+      precio200U: 1271,
+      disponible: 'No',
+      categoria: 'Deportivo',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '092',
+      tipoPrenda: 'Camiseta',
+      talla: 'S',
+      color: 'Gris',
+      cantidadDisponible: 226,
+      precio50U: 987,
+      precio100U: 490,
+      precio200U: 904,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '093',
+      tipoPrenda: 'Camiseta',
+      talla: 'L',
+      color: 'Blanco',
+      cantidadDisponible: 100,
+      precio50U: 599,
+      precio100U: 1336,
+      precio200U: 1246,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Material de alta calidad.',
+    },
+    {
+      id: '094',
+      tipoPrenda: 'Pantalón',
+      talla: 'XL',
+      color: 'Gris',
+      cantidadDisponible: 249,
+      precio50U: 756,
+      precio100U: 1288,
+      precio200U: 425,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Diseño moderno y elegante.',
+    },
+    {
+      id: '095',
+      tipoPrenda: 'Camiseta',
+      talla: 'XL',
+      color: 'Negro',
+      cantidadDisponible: 245,
+      precio50U: 541,
+      precio100U: 1095,
+      precio200U: 681,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '096',
+      tipoPrenda: 'Falda',
+      talla: 'L',
+      color: 'Negro',
+      cantidadDisponible: 480,
+      precio50U: 975,
+      precio100U: 457,
+      precio200U: 798,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Prenda cómoda y ligera.',
+    },
+    {
+      id: '097',
+      tipoPrenda: 'Falda',
+      talla: 'XXL',
+      color: 'Azul',
+      cantidadDisponible: 51,
+      precio50U: 973,
+      precio100U: 785,
+      precio200U: 628,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '098',
+      tipoPrenda: 'Sudadera',
+      talla: 'XXL',
+      color: 'Azul',
+      cantidadDisponible: 114,
+      precio50U: 1491,
+      precio100U: 529,
+      precio200U: 476,
+      disponible: 'Sí',
+      categoria: 'Casual',
+      descripcion: 'Perfecta para actividades al aire libre.',
+    },
+    {
+      id: '099',
+      tipoPrenda: 'Camiseta',
+      talla: 'S',
+      color: 'Verde',
+      cantidadDisponible: 391,
+      precio50U: 1067,
+      precio100U: 372,
+      precio200U: 366,
+      disponible: 'Sí',
+      categoria: 'Formal',
+      descripcion: 'ideal para uso diario.',
+    },
+    {
+      id: '100',
+      tipoPrenda: 'Chaqueta',
+      talla: 'XL',
+      color: 'Rojo',
+      cantidadDisponible: 347,
+      precio50U: 1117,
+      precio100U: 565,
+      precio200U: 358,
+      disponible: 'Sí',
+      categoria: 'Deportivo',
+      descripcion: 'Diseño moderno y elegante.',
+    },
   ],
 };

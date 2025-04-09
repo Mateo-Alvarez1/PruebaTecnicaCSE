@@ -1,3 +1,4 @@
+import { StringDecoder } from 'string_decoder';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 
 @Entity()
@@ -27,7 +28,7 @@ export class Product {
   precio200U: number;
 
   @Column()
-  disponible: string;
+  disponible: StringDecoder;
 
   @Column()
   categoria: string;

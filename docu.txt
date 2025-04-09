@@ -1,9 +1,8 @@
 -- DESARROLLAR AGENTE CONVERSACIONAL -- 
 
-OBJETIVOS --> - Leer datos de una BD
-              - Meter Auth ? 
-              - Registrar pedidos de Compra 
-              - Editar Pedido dentro de los primeros 5 minutos de creacion
+OBJETIVOS --> - Leer datos de una BD - check
+              - Registrar pedidos de Compra  - check 
+              - Editar Pedido dentro de los primeros 5 minutos de creacion - check
               - Integrarse con WhatsApp
          
 ARQUITECTURA SIMPLIFICADA -->       USER (W) --> API WSP -> BACKEND -> BD / ENDPOINTS
@@ -15,3 +14,12 @@ LIBRERIAS -> - Class-Validator & Class-Transformer
              - pg 
              - xlsx
              - ts-node typescript
+             -twilio
+
+Commit -> CRUD Products y Seed DB
+            - Hasta este commit se construyó una base de datos PostgreSQL a partir del archivo DB.xlsx, realizando la transformación y carga de los datos de forma masiva. Se creó una entidad Product con su respectiva tabla en la base de datos, y se implementó un servicio en NestJS con un endpoint que permite acceder a los productos disponibles. Esto sienta las bases para que el agente de ventas pueda consultar la información necesaria para operar.
+
+Commit -> Orders , update , whatsapp 
+           - Hasta este commit se trabajo en la creacion de una Orden de compra y La actualizacion de la misma teniendo en cuenta que pasados los 5 minutos de su creacion no se puede actualizar,
+           A su vez utilizamos Twilio para manejar la confirmacion de la orden a traves de whatsapp.
+

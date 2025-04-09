@@ -25,9 +25,14 @@ export class ProductController {
     return this.productService.findAll();
   }
 
-  @Get(':term')
-  findOne(@Param('term') term: string) {
-    return this.productService.findOne(term);
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.productService.findOneById(id);
+  }
+
+  @Get('/term/:term')
+  findOneBy(@Param('term') term: string) {
+    return this.productService.findOneBy(term);
   }
 
   @Patch(':id')

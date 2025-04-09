@@ -1,5 +1,5 @@
-import { StringDecoder } from 'string_decoder';
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Order } from 'src/order/entities/order.entity';
+import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 
 @Entity()
 export class Product {
@@ -28,11 +28,14 @@ export class Product {
   precio200U: number;
 
   @Column()
-  disponible: StringDecoder;
+  disponible: string;
 
   @Column()
   categoria: string;
 
   @Column({ type: 'text' })
   descripcion: string;
+
+  @OneToMany(() => Order, (order) => order.products)
+  orders: Order[];
 }

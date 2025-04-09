@@ -8,8 +8,6 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
-import { validate as IsUUID } from 'uuid';
-
 @Injectable()
 export class ProductService {
   constructor(
@@ -36,7 +34,7 @@ export class ProductService {
     return this.productRepository.find();
   }
 
-  async findOne(id: string) {
+  async findOneById(id: string) {
     //definimos una varibale producto
     let product: Product | null;
 
@@ -50,7 +48,6 @@ export class ProductService {
 
     return product;
   }
-
   async update(id: string, updateProductDto: UpdateProductDto) {
     //usamos preload para precargar los datos del producto buscando en base a ese id
     const product = await this.productRepository.preload({
@@ -73,8 +70,30 @@ export class ProductService {
     }
   }
 
+  async findOneBy(term: string) {
+    let product: Product[];
+
+    const queryBuilder = this.productRepository.createQueryBuilder('Product');
+    // Buscamos todos los productos que coincidan con la categoria o tipoPrenda especifica a traves de un constructor de cosultas
+    product = await queryBuilder
+      .where(
+        `UPPER(Product.tipoPrenda) =:tipoPrenda or LOWER(Product.categoria) =:categoria`,
+        {
+          tipoPrenda: term.toUpperCase(),
+          categoria: term.toLowerCase(),
+        },
+      )
+      .getMany();
+
+    if (!product) {
+      throw new BadRequestException(`Product with ${term} not found`);
+    }
+
+    return product;
+  }
+
   async deleteById(id: string) {
-    const product = await this.findOne(id);
+    const product = await this.findOneById(id);
     await this.productRepository.remove(product);
   }
 

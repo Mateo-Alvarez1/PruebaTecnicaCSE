@@ -29,6 +29,9 @@ export class Order {
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
   total: number;
 
-  @ManyToOne(() => Product, (product) => product.orders, { cascade: true })
+  @ManyToOne(() => Product, (product) => product.orders, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   products: Product;
 }

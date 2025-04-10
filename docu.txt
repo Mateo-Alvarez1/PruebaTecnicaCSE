@@ -23,8 +23,13 @@ Commit -> Orders , update , whatsapp
            - Hasta este commit se trabajo en la creacion de una Orden de compra y La actualizacion de la misma teniendo en cuenta que pasados los 5 minutos de su creacion no se puede actualizar,
            A su vez utilizamos Twilio para manejar la confirmacion de la orden a traves de whatsapp.
 
-DESPLIGUE A PRODU : 
+DESPLIGUE A PRODUCCION :
 
-Use SUPABASE para tener una base de datos PostgreSQL en la nube y con backup
-Desplegue mi Backend en Zeabur
-y Utilize los webhooks de Twilio para el manejo de mensajes
+Se desarrollo una API utilizando NestJS conectada a una base de datos PostgreSQL en Supabase lista en produccion.
+Se integró el servicio de mensajería de WhatsApp mediante la API de Twilio, enviando notificaciones al agente cuando se crea y actualiza un pedido de compra.
+Ademas se implemento la edición de pedidos por parte del agente dentro de los primeros 5 minutos desde su creación, utilizando lógica condicional por timestamps . Enviando tambine una notificacion en caso de que el tiempo de modificacion haya expirado.
+
+Quedo la arquitectura lista para interpretar webhooks desde Twilio, permitiendo que en una futura iteración, los clientes puedan interactuar directamente con el backend vía WhatsApp (por ejemplo, para confirmar, modificar o cancelar un pedido).
+
+
+

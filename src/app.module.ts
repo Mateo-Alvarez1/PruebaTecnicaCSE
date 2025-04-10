@@ -13,11 +13,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
     // Inicializamos el modulo raiz de TypeORM para generar la conexion a la base de datos dockerizada
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      database: process.env.DB_NAME,
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
+      url: process.env.DATABASE_URL,
       autoLoadEntities: true, // detecta las entidades automaticamente
       synchronize: true, // sincroniza nuestras entidades con la DB al inciar el programa
     }),

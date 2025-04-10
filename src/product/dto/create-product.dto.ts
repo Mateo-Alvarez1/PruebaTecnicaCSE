@@ -39,7 +39,6 @@ export class CreateProductDto {
   precio200U: number;
 
   @IsString()
-  @Transform(({ value }) => value === 'Sí' || value === true)
   disponible: string;
 
   @IsString()

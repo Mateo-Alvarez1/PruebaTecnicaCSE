@@ -76,6 +76,9 @@ Muchas gracias por tu compra!
 
     // En caso de que no pase la validacion se lanza una excepcion de que el producto no se puede actualizar pasado los 5 minutos
     if (difInMinutes > 5) {
+      // Vamos a mandar un mensaje para avisarle al cliente que su actualizacion no se pudo hacer por que pasaron 5 minutos desde su creacion
+      const message = `Hola *${order.clientName}*, tu orden no se pudo actualizar ya que pasaron 5 minutos desde su creacion`;
+      await this.whatsappService.sendMessage(order.phoneNumber, message);
       throw new BadRequestException(
         'The order can only be edited in the first 5 minutes after its creation.',
       );
@@ -90,6 +93,15 @@ Muchas gracias por tu compra!
     if (!updateProd) {
       throw new BadRequestException('Order is undefined');
     }
+
+    // Vamos a mandar un mensaje para avisarle al cliente que pudo actualizar su orden
+    const message = `Hola *${updateProd.clientName}*, tu orden fue actualizada con éxito.
+El *Total a pagar* es: *${updateProd.total}*. 
+*Detalle:* ${updateProd.products?.tipoPrenda} ${updateProd.products?.color} ${updateProd.products?.talla}. 
+${updateProd.products?.descripcion}. 
+Muchas gracias por tu compra! 
+*Estado:* ${updateProd.status}`;
+    await this.whatsappService.sendMessage(updateProd.phoneNumber, message);
 
     return await this.orderRepository.save(updateProd);
   }

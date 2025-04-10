@@ -23,3 +23,8 @@ Commit -> Orders , update , whatsapp
            - Hasta este commit se trabajo en la creacion de una Orden de compra y La actualizacion de la misma teniendo en cuenta que pasados los 5 minutos de su creacion no se puede actualizar,
            A su vez utilizamos Twilio para manejar la confirmacion de la orden a traves de whatsapp.
 
+DESPLIGUE A PRODU : 
+
+Use SUPABASE para tener una base de datos PostgreSQL en la nube y con backup
+Desplegue mi Backend en Zeabur
+y Utilize los webhooks de Twilio para el manejo de mensajes

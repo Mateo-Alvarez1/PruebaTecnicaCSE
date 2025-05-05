@@ -9,16 +9,16 @@ import { WhatsappModule } from './whatsapp/whatsapp.module';
   imports: [
     SeedModule,
     ProductModule,
+    WhatsappModule,
     ConfigModule.forRoot(),
-    // Inicializamos el modulo raiz de TypeORM para generar la conexion a la base de datos dockerizada
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
       autoLoadEntities: true, // detecta las entidades automaticamente
       synchronize: true, // sincroniza nuestras entidades con la DB al inciar el programa
     }),
+
     OrderModule,
-    WhatsappModule,
   ],
   controllers: [],
   providers: [],

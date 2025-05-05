@@ -9,15 +9,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import { Repository } from 'typeorm';
 import { ProductService } from '../product/product.service';
-import { WhatsappService } from '../whatsapp/whatsapp.service';
 
 @Injectable()
 export class OrderService {
   constructor(
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
-    private readonly productService: ProductService,
-    private readonly whatsappService: WhatsappService,
+    private readonly productService: ProductService
   ) {}
 
   async create(createOrderDto: CreateOrderDto) {
@@ -45,16 +43,6 @@ export class OrderService {
       status: 'confirmed',
     });
 
-    // Vamos a crear el template del mensaje que se le va a enviar al cliente una vez que realiza el pedido
-    const message = `Hola *${order.clientName}*, tu orden fue creada con éxito.
-El *Total a pagar* es: *${order.total}*. 
-*Detalle:* ${order.products.tipoPrenda} ${order.products.color} ${order.products.talla}. 
-${order.products.descripcion}. 
-Muchas gracias por tu compra! 
-*Estado:* ${order.status}`;
-    // Enviamos los datos al metodo sendMessage de nuestro WhatsappService que se va a encargar de manejar el envio de mensajes
-    await this.whatsappService.sendMessage(order.phoneNumber, message);
-    // por ultimo guardamos la orden en nuestra base de datos y retornamos
     await this.orderRepository.save(order);
 
     return order;
@@ -76,9 +64,6 @@ Muchas gracias por tu compra!
 
     // En caso de que no pase la validacion se lanza una excepcion de que el producto no se puede actualizar pasado los 5 minutos
     if (difInMinutes > 5) {
-      // Vamos a mandar un mensaje para avisarle al cliente que su actualizacion no se pudo hacer por que pasaron 5 minutos desde su creacion
-      const message = `Hola *${order.clientName}*, tu orden no se pudo actualizar ya que pasaron 5 minutos desde su creacion`;
-      await this.whatsappService.sendMessage(order.phoneNumber, message);
       throw new BadRequestException(
         'The order can only be edited in the first 5 minutes after its creation.',
       );
@@ -94,15 +79,19 @@ Muchas gracias por tu compra!
       throw new BadRequestException('Order is undefined');
     }
 
-    // Vamos a mandar un mensaje para avisarle al cliente que pudo actualizar su orden
-    const message = `Hola *${updateProd.clientName}*, tu orden fue actualizada con éxito.
-El *Total a pagar* es: *${updateProd.total}*. 
-*Detalle:* ${updateProd.products?.tipoPrenda} ${updateProd.products?.color} ${updateProd.products?.talla}. 
-${updateProd.products?.descripcion}. 
-Muchas gracias por tu compra! 
-*Estado:* ${updateProd.status}`;
-    await this.whatsappService.sendMessage(updateProd.phoneNumber, message);
-
     return await this.orderRepository.save(updateProd);
   }
+
+  async findOneById(id: number) {
+      let order: Order | null;
+  
+      order = await this.orderRepository.findOneBy({ id });
+  
+      if (!order) {
+        throw new NotFoundException(`Product with ${id} not found`);
+      }
+  
+      return order;
+    }
+  
 }
